@@ -1,0 +1,117 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Dec  5 17:13:08 2020
+
+@author: james
+"""
+
+#from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
+
+import matplotlib.pyplot as plt
+from matplotlib import cm
+from matplotlib.ticker import LinearLocator, FormatStrFormatter
+import numpy as np
+
+
+width = 20 # width of microprocessor in mm
+height = 2 # height of microprocessor in mm
+h = 0.1
+hx = h # x step size
+hy = h # y step size
+initval = 1 # initial guess for T at all points
+q = 0.5
+k = 150
+Hc = 25
+Ta = 25
+
+#%% Plotting the domain
+
+x = np.arange(-width/2 - hx, width/2 + 2*hx, hx)
+y = np.arange(-height/2 - hx, height/2 + 2*hy, hy)
+X, Y = np.meshgrid(x, y)
+#R = np.sqrt(X**2 + Y**2)
+#Z = np.sin(R)
+
+fig1 = plt.figure(figsize = (width,height))
+plt.plot(X,Y,'.',color = 'red',ms = 5)
+
+for i in range(len(x)):
+    for j in range(len(y)):
+        plt.text(x[i]+(x[1]-x[0])/8,y[j]+(y[1]-y[0])/8,"(%i, %d)" %( i , j ))
+
+plt.title('Microprocessor Discrete Points')
+plt.tight_layout()
+plt.show()
+
+
+#%%
+
+T = np.zeros((len(x),len(y)))
+T.fill(initval)
+
+updatemat = np.zeros((len(x),len(y)))
+
+Q = np.zeros((len(x),len(y)))
+Q.fill(q)
+
+def nextij(T,Q,i,j,h = h,k = k):
+    
+    if (i == 1): # left side
+        updatemat[i-1,j] = (h*Hc/k) * (T[i,j] - Ta) + T[i,j+1] - T[i,j-1] + T[i+1,j]
+        
+    if (j == 1):
+        updatemat[i,j-1] = (h*Hc/k) * (T[i,j] - Ta) + T[i,j+1] - T[i-1,j] + T[i+1,j]
+    
+    if (i == T.shape[0] - 2):
+        updatemat[i+1,j] = (h*Hc/k) * (Ta - T[i,j]) - T[i-1,j] + T[i,j-1] - T[i,j+1]
+        
+    if (j == T.shape[1] - 2):
+        updatemat[i,j+1] = (h*Hc/k) * (Ta - T[i,j]) - T[i,j+1] + T[i,j-1] - T[i+1,j]
+    
+    return (1/4) * ( (h**2/k) * Q[i,j] - ( T[i-1,j] + T[i,j-1] + T[i+1,j] + T[i,j+1] ) )
+
+
+    
+def nextiter():
+    for i in range(1,T.shape[0]-1):
+        for j in range(1,T.shape[1]-1):
+            print("i,j: ")
+            print(i)
+            print(j)
+            print()
+            updatemat[i,j] = nextij(T,Q,i,j)
+            print(updatemat[i,j])
+            
+    for i in range(0,T.shape[0]-1):
+        for j in range(0,T.shape[1]-1):
+            T[i,j] = updatemat[i,j]
+            
+
+for i in range(20):
+    nextiter()
+    
+#%%
+
+fig = plt.figure(figsize = (width,height))
+plt.title('Microprocessor Discrete Points')
+# plt.tight_layout()
+# plt.plot(X,Y,'.',color = 'red',ms = 5)
+# for i in range(len(x)):
+#     for j in range(len(y)):
+#         plt.text(x[i]+(x[1]-x[0])/8,y[j]+(y[1]-y[0])/8, T[i,j] )
+
+#fig = plt.figure()
+ax = fig.gca(projection='3d')
+# Plot the surface.
+surf = ax.plot_surface(X, Y, Tt, cmap=cm.coolwarm,
+                        linewidth=0, antialiased=False)
+
+# Customize the z axis.
+# ax.set_zlim(-1.01, 1.01)
+ax.zaxis.set_major_locator(LinearLocator(10))
+ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
+
+# Add a color bar which maps values to colors.
+fig.colorbar(surf, shrink=0.5, aspect=5)
+
+plt.show()
